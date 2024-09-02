@@ -1,10 +1,70 @@
+def remote = [:]
+    remote.name = 'root'
+    remote.host = '172.18.0.4'
+    remote.allowAnyHosts = true
 pipeline {
     agent any
+    // Объявление параметров запуска
+    parameters {
+        string(name: 'release', defaultValue: 'DWH/', description: 'release')
+        string(name: 'branch', defaultValue: 'feature/', description: 'branch')
+        choice(choices: ['INFO', 'ERROR', 'WARN', 'DEBUG'], description: 'Выбор уровня логирования', name: 'logging_level')
+    }
+    environment {
+        SSH_CREDS = credentials('root')
+        // Подсветка служебных слов в логе
+        ANSI_COLOR = 'xterm'
+        HIGHLIGHT_WORDS = '[Ee]rror|[Ff]ail|[Ss]kip|[Ww]arn'
+    }
+    options {
+        // Настройка связи с Bitbucket
+        timestamps()
+    }
     stages {
-        stage('hello') {
+        
+        stage('Test API') {
             steps {
-                echo 'echo Hello Jenkins!'
+                script {
+                    echo "user = " + env.BUILD_USER
+                    def body = """{
+                        "release": "${params.release}",
+                        "branch" : "${params.branch}",
+                        "username": "$env.BUILD_USER",
+                        "password": "rrr",
+                        "date": "09.08.2024 10:10:10",
+                        "logging_level": "${params.logging_level}"
+                    }"""
+                    def response = httpRequest consoleLogResponseBody: true, httpMode: 'GET', ignoreSslErrors: true, requestBody: body, validResponseCodes: '200', url: 'https://host.docker.internal:8443/api', wrapAsMultipart: false
+                    echo "Status: $response.status"
+                    echo "Content: "+response.content
+                    
+                    
+                    remote.user=env.SSH_CREDS_USR
+                    remote.password=env.SSH_CREDS_PSW
+                    
+                    
+                    // sshCommand(remote: remote, command: "ls -lrt /cg/newfile.log")
+                    sshGet remote: remote, from: '/cg/logs/app_log.log', into: '/var/jenkins_home', override: true
+                    // sshGet remote: remote, from: '/cg/parser_rools.txt', into: '/var/jenkins_home', override: true
+                    def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
+                    echo "======= echo user - log file ======="
+                    echo "$read"
+                    
+
+                    
+                }
             }
+        }
+        stage('env')
+        {
+            steps{
+                sh 'env | sort'
+            }
+        }
+    }
+    post {
+        always{
+            sleep 5
         }
     }
 }
