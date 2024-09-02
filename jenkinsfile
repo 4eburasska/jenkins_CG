@@ -14,7 +14,7 @@ pipeline {
         SSH_CREDS = credentials('root')
         // Подсветка служебных слов в логе
         ANSI_COLOR = 'xterm'
-        HIGHLIGHT_WORDS = '[Ee]rror|[Ff]ail|[Ss]kip|[Ww]arn'
+        HIGHLIGHT_WORDS = '[Ee]rror|[Ff]ail|[Ss]kip|[Ww]arn|ERROR'
     }
     options {
         // Настройка связи с Bitbucket
