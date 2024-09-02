@@ -34,7 +34,7 @@ pipeline {
                         "date": "09.08.2024 10:10:10",
                         "logging_level": "${params.logging_level}"
                     }"""
-                    def response = httpRequest consoleLogResponseBody: true, httpMode: 'GET', ignoreSslErrors: true, requestBody: body, validResponseCodes: '200', url: 'https://host.docker.internal:8443/api', wrapAsMultipart: false
+                    def response = httpRequest consoleLogResponseBody: true, httpMode: 'POST', ignoreSslErrors: true, requestBody: body, validResponseCodes: '200', url: 'https://host.docker.internal:8443/api/start', wrapAsMultipart: false
                     echo "Status: $response.status"
                     echo "Content: "+response.content
                     
