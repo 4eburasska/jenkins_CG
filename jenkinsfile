@@ -24,7 +24,7 @@ pipeline {
     }
     stages {
         
-        stage('Test API') {
+        stage('Call API') {
             steps {
                 script {
                     echo "user = " + env.BUILD_USER
