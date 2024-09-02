@@ -12,13 +12,15 @@ pipeline {
     }
     environment {
         SSH_CREDS = credentials('root')
+        BB_CREDS = credentials('bitbucket')
         // Подсветка служебных слов в логе
         ANSI_COLOR = 'xterm'
-        HIGHLIGHT_WORDS = '[Ee]rror|[Ff]ail|[Ss]kip|[Ww]arn|ERROR'
+        HIGHLIGHT_WORDS = '[Ee]rror|[Ff]ail|[Ss]kip|[Ww]arn'
     }
     options {
         // Настройка связи с Bitbucket
         timestamps()
+        disableConcurrentBuilds()
     }
     stages {
         
@@ -27,44 +29,51 @@ pipeline {
                 script {
                     echo "user = " + env.BUILD_USER
                     def body = """{
-                        "release": "${params.release}",
-                        "branch" : "${params.branch}",
-                        "username": "$env.BUILD_USER",
-                        "password": "rrr",
+                        "release": "$params.release",
+                        "branch" : "$params.branch",
+                        "developer": "$env.BUILD_USER",
+                        "username": "$env.BB_CREDS_USR",
+                        "password": "$env.BB_CREDS_PSW",
                         "date": "09.08.2024 10:10:10",
-                        "logging_level": "${params.logging_level}"
+                        "logging_level": "$params.logging_level"
                     }"""
-                    def response = httpRequest consoleLogResponseBody: true, httpMode: 'POST', ignoreSslErrors: true, requestBody: body, validResponseCodes: '200', url: 'https://host.docker.internal:8443/api/start', wrapAsMultipart: false
-                    echo "Status: $response.status"
-                    echo "Content: "+response.content
-                    
-                    
-                    remote.user=env.SSH_CREDS_USR
-                    remote.password=env.SSH_CREDS_PSW
-                    
-                    
-                    // sshCommand(remote: remote, command: "ls -lrt /cg/newfile.log")
-                    sshGet remote: remote, from: '/cg/logs/app_log.log', into: '/var/jenkins_home', override: true
-                    // sshGet remote: remote, from: '/cg/parser_rools.txt', into: '/var/jenkins_home', override: true
-                    def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
-                    echo "======= echo user - log file ======="
-                    echo "$read"
-                    
-
-                    
+                    echo "response body: " + body
+                    try{
+                        def response = httpRequest consoleLogResponseBody: false, 
+                        httpMode: 'POST', ignoreSslErrors: true, requestBody: body, 
+                        validResponseCodes: '200,400:450', 
+                        url: 'https://host.docker.internal:8443/api/start', 
+                        responseHandle: 'LEAVE_OPEN', 
+                        wrapAsMultipart: false
+                        echo "Status: $response.status"
+                        echo "Content: "+response.content
+                        
+                        if (response.status != 200){
+                            error( response.content)
+                        }
+                    }
+                    catch (Exception e) {
+                        error("Error occurred: ${e.getMessage()}")
+                        // echo "$statusCode"
+                    }
                 }
-            }
-        }
-        stage('env')
-        {
-            steps{
-                sh 'env | sort'
             }
         }
     }
     post {
         always{
-            sleep 5
+            script{
+                remote.user=env.SSH_CREDS_USR
+                remote.password=env.SSH_CREDS_PSW
+                
+                sshGet remote: remote, from: '/cg/logs/app_log.log', into: '/var/jenkins_home', override: true
+                def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
+                echo "======= echo user - log file ======="
+                echo "$read"
+            }
+        }
+        failure{
+            echo "See log above to see errors"
         }
     }
 }
