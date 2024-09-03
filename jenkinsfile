@@ -27,34 +27,36 @@ pipeline {
         stage('Call API') {
             steps {
                 script {
-                    echo "user = " + env.BUILD_USER
-                    def body = """{
-                        "release": "$params.release",
-                        "branch" : "$params.branch",
-                        "developer": "$env.BUILD_USER",
-                        "username": "$env.BB_CREDS_USR",
-                        "password": "$env.BB_CREDS_PSW",
-                        "date": "09.08.2024 10:10:10",
-                        "logging_level": "$params.logging_level"
-                    }"""
-                    echo "response body: " + body
-                    try{
-                        def response = httpRequest consoleLogResponseBody: false, 
-                        httpMode: 'POST', ignoreSslErrors: true, requestBody: body, 
-                        validResponseCodes: '200,400:450', 
-                        url: 'https://host.docker.internal:8443/api/start', 
-                        responseHandle: 'LEAVE_OPEN', 
-                        wrapAsMultipart: false
-                        echo "Status: $response.status"
-                        echo "Content: "+response.content
-                        
-                        if (response.status != 200){
-                            error( response.content)
+                    wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']){
+                        echo "user = " + env.BUILD_USER
+                        def body = """{
+                            "release": "$params.release",
+                            "branch" : "$params.branch",
+                            "developer": "$env.BUILD_USER",
+                            "username": "$env.BB_CREDS_USR",
+                            "password": "$env.BB_CREDS_PSW",
+                            "date": "09.08.2024 10:10:10",
+                            "logging_level": "$params.logging_level"
+                        }"""
+                        echo "response body: " + body
+                        try{
+                            def response = httpRequest consoleLogResponseBody: false, 
+                            httpMode: 'POST', ignoreSslErrors: true, requestBody: body, 
+                            validResponseCodes: '200,400:450', 
+                            url: 'https://host.docker.internal:8443/api/start', 
+                            responseHandle: 'LEAVE_OPEN', 
+                            wrapAsMultipart: false
+                            echo "Status: $response.status"
+                            echo "Content: "+response.content
+                            
+                            if (response.status != 200){
+                                error( response.content)
+                            }
                         }
-                    }
-                    catch (Exception e) {
-                        error("Error occurred: ${e.getMessage()}")
-                        // echo "$statusCode"
+                        catch (Exception e) {
+                            error("Error occurred: ${e.getMessage()}")
+                            // echo "$statusCode"
+                        }
                     }
                 }
             }
@@ -63,13 +65,17 @@ pipeline {
     post {
         always{
             script{
-                remote.user=env.SSH_CREDS_USR
-                remote.password=env.SSH_CREDS_PSW
-                
-                sshGet remote: remote, from: '/cg/logs/app_log.log', into: '/var/jenkins_home', override: true
-                def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
-                echo "======= echo user - log file ======="
-                echo "$read"
+                ansiColor('xterm'){
+                    remote.user=env.SSH_CREDS_USR
+                    remote.password=env.SSH_CREDS_PSW
+                    sshGet remote: remote, from: '/cg/logs', into: '/var/jenkins_home/workspace/test', override: true
+                    // def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
+                    // echo "======= echo user - log file ======="
+                    // echo "$read"
+                    sshCommand remote: remote, command: "cat /cg/logs/app_log.log"
+                    // sh "cat /cg/logs/app_log.log"
+                    archiveArtifacts artifacts: '**', followSymlinks: false
+                }
             }
         }
         failure{
