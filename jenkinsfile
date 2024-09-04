@@ -65,7 +65,7 @@ pipeline {
     post {
         always{
             script{
-                echo $env
+                sh 'env | sort'
                 remote.user=env.SSH_CREDS_USR
                 remote.password=env.SSH_CREDS_PSW
                 sshGet remote: remote, from: '/cg/logs', into: '/var/jenkins_home/workspace/test', override: true
