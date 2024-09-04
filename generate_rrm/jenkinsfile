@@ -55,7 +55,7 @@ pipeline {
                         sshGet remote: remote, from: '/cg/logs', into: env.WORKSPACE, override: true
                         //sshGet remote: remote, from: props["roles_path"], into: env.WORKSPACE, override: true
                         archiveArtifacts(
-                        artifacts: env.WORKSPACE,
+                        artifacts: env.JOB_NAME,
                         allowEmptyArchive: true,
                         onlyIfSuccessful: false
                         )
