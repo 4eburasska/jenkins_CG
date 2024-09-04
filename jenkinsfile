@@ -28,7 +28,7 @@ pipeline {
             steps {
                 script {
                     wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']){
-                        echo "user = " + env.BUILD_USER
+                        echo "The pipeline startet by: " + env.BUILD_USER
                         def body = """{
                             "release": "$params.release",
                             "branch" : "$params.branch",
@@ -65,17 +65,17 @@ pipeline {
     post {
         always{
             script{
-                ansiColor('xterm'){
-                    remote.user=env.SSH_CREDS_USR
-                    remote.password=env.SSH_CREDS_PSW
-                    sshGet remote: remote, from: '/cg/logs', into: '/var/jenkins_home/workspace/test', override: true
-                    // def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
-                    // echo "======= echo user - log file ======="
-                    // echo "$read"
-                    sshCommand remote: remote, command: "cat /cg/logs/app_log.log"
-                    // sh "cat /cg/logs/app_log.log"
-                    archiveArtifacts artifacts: '**', followSymlinks: false
-                }
+                echo $env
+                remote.user=env.SSH_CREDS_USR
+                remote.password=env.SSH_CREDS_PSW
+                sshGet remote: remote, from: '/cg/logs', into: '/var/jenkins_home/workspace/test', override: true
+                // def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
+                // echo "======= echo user - log file ======="
+                // echo "$read"
+                sshCommand remote: remote, command: "cat /cg/logs/app_log.log"
+                // sh "cat /cg/logs/app_log.log"
+                archiveArtifacts artifacts: '**', followSymlinks: false
+            
             }
         }
         failure{
