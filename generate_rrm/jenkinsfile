@@ -42,7 +42,7 @@ pipeline {
                             // def log_path = props['log_path']
                             error(props['detail'])
                         }
-                        sshGet remote: remote, from: /cg/logs/ into: env.PWD, override: true
+                        sshGet remote: remote, from: '/cg/logs' into: env.PWD, override: true
                         ..sshGet remote: remote, from: props["roles_path"], into: env.PWD, override: true
                         archiveArtifacts(
                         artifacts: props["roles_path"],
