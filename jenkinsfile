@@ -46,16 +46,16 @@ pipeline {
                             url: 'https://host.docker.internal:8443/api/start', 
                             responseHandle: 'LEAVE_OPEN', 
                             wrapAsMultipart: false
-                            echo "Status: $response.status"
-                            echo "Content: "+response.content
+                            def props = readJSON text: response.content
                             
                             if (response.status != 200){
-                                error( response.content)
+                                error(props['detail'])
+                            } else{
+                                echo "props['message']"
                             }
                         }
                         catch (Exception e) {
                             error("Error occurred: ${e.getMessage()}")
-                            // echo "$statusCode"
                         }
                     }
                 }
