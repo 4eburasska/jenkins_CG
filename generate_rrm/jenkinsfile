@@ -8,6 +8,11 @@ pipeline {
     environment {
         SSH_CREDS = credentials('root')
     }
+    parameters {
+        string(name: 'release', defaultValue: 'DWH/', description: 'release')
+        string(name: 'branch', defaultValue: 'feature/', description: 'branch')
+        choice(choices: ['INFO', 'ERROR', 'WARN', 'DEBUG'], description: 'Выбор уровня логирования', name: 'logging_level')
+    }
     options {
         // Настройка связи с Bitbucket
         timestamps()
