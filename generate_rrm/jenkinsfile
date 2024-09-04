@@ -5,14 +5,8 @@ def remote = [:]
 pipeline {
     agent any
     // Объявление параметров запуска
-    parameters {
-        string(name: 'release', defaultValue: 'DWH/', description: 'release')
-        string(name: 'branch', defaultValue: 'feature/', description: 'branch')
-        choice(choices: ['INFO', 'ERROR', 'WARN', 'DEBUG'], description: 'Выбор уровня логирования', name: 'logging_level')
-    }
     environment {
         SSH_CREDS = credentials('root')
-        BB_CREDS = credentials('bitbucket')
     }
     options {
         // Настройка связи с Bitbucket
@@ -37,9 +31,9 @@ pipeline {
                     echo "response body: " + body
                     try{
                         def response = httpRequest consoleLogResponseBody: false, 
-                        httpMode: 'POST', ignoreSslErrors: true, requestBody: body, 
+                        httpMode: 'GET', ignoreSslErrors: true, 
                         validResponseCodes: '200,400:450,500', 
-                        url: 'https://host.docker.internal:8443/api/start', 
+                        url: 'https://host.docker.internal:8443/api', 
                         responseHandle: 'LEAVE_OPEN', 
                         wrapAsMultipart: false
                         def props = readJSON text: response.content
@@ -48,6 +42,12 @@ pipeline {
                             // def log_path = props['log_path']
                             error(props['detail'])
                         }
+                        sshGet remote: remote, from: props["roles_path"], into: env.PWD, override: true
+                        archiveArtifacts(
+                        artifacts: props["roles_path"],
+                        allowEmptyArchive: true,
+                        onlyIfSuccessful: false
+                        )
                     }
                     catch (Exception e) {
                         error("Error occurred: ${e.getMessage()}")
@@ -59,28 +59,7 @@ pipeline {
     post {
         always{
             script{
-                def job_path = env.JENKINS_HOME + '/jobs/' + env.JOB_NAME + '/builds/' + env.BUILD_NUMBER
-            // echo job_path
-                sh 'env | sort'
-                remote.user=env.SSH_CREDS_USR
-                remote.password=env.SSH_CREDS_PSW
-                sshGet remote: remote, from: "/cg/logs", into: job_path, override: true
-                // def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
-                // echo "======= echo user - log file ======="
-                // echo "$read"
-                // echo "$log_path"
-                // def cat_command = "cat "+ log_path
-                def log_path = "/cg/logs/app_log.log"
-                def cat_command = "cat "+ log_path
-                echo job_path
-                sshCommand remote: remote, command: cat_command
-                archiveArtifacts(
-                artifacts: "logs/",
-                allowEmptyArchive: true,
-                onlyIfSuccessful: false
-                )
-                // archiveArtifacts artifacts:  '/jobs/', followSymlinks: false
-            
+                echo "Hello"
             }
         }
         failure{
