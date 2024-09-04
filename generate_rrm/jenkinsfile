@@ -7,6 +7,7 @@ pipeline {
     // Объявление параметров запуска
     environment {
         SSH_CREDS = credentials('root')
+        BB_CREDS = credentials('bitbucket')
     }
     parameters {
         string(name: 'release', defaultValue: 'DWH/', description: 'release')
@@ -50,7 +51,7 @@ pipeline {
                         sshGet remote: remote, from: '/cg/logs', into: env.PWD, override: true
                         //sshGet remote: remote, from: props["roles_path"], into: env.PWD, override: true
                         archiveArtifacts(
-                        artifacts: props["roles_path"],
+                        artifacts: env.PWD,
                         allowEmptyArchive: true,
                         onlyIfSuccessful: false
                         )
