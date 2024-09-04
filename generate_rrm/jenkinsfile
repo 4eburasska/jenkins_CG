@@ -57,9 +57,8 @@ pipeline {
                         sshGet remote: remote, from: rrm_path, into: env.WORKSPACE, override: true
                         //sshGet remote: remote, from: props["roles_path"], into: env.WORKSPACE, override: true
                         archiveArtifacts(
-                        artifacts: list_rrm_path.get(list_rrm_path.size()-1),
-                        allowEmptyArchive: true,
-                        onlyIfSuccessful: false
+                        artifacts: list_rrm_path.get(list_rrm_path.size()-1) + '/**',
+                        allowEmptyArchive: true
                         )
                     }
                     catch (Exception e) {
