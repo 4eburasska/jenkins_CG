@@ -48,6 +48,8 @@ pipeline {
                             // def log_path = props['log_path']
                             error(props['detail'])
                         }
+                        remote.user=env.SSH_CREDS_USR
+                        remote.password=env.SSH_CREDS_PSW
                         sshGet remote: remote, from: '/cg/logs', into: env.PWD, override: true
                         //sshGet remote: remote, from: props["roles_path"], into: env.PWD, override: true
                         archiveArtifacts(
