@@ -25,6 +25,7 @@ pipeline {
                 script {
                     
                     echo "The pipeline startet by: " + env.BUILD_USER
+                    sh 'env | sort'
                     def body = """{
                         "release": "$params.release",
                         "branch" : "$params.branch",
