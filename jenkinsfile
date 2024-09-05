@@ -23,7 +23,16 @@ pipeline {
         stage('Call API') {
             steps {
                 script {
-                    
+                    stage('Verify Parameters') {
+                        steps {
+                            script{
+                                if (params.release == '')
+                                    error("Release parameter must be specified")
+                                if (params.branch == '')
+                                    error("Branch parameter must be specified")
+                            }
+                        }
+                    }
                     echo "The pipeline startet by: " + env.BUILD_USER
                     def body = """{
                         "release": "$params.release",
