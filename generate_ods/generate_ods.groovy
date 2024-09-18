@@ -1,0 +1,90 @@
+def remote = [:]
+    remote.name = 'root'
+    remote.host = '172.18.0.4'
+    remote.allowAnyHosts = true
+pipeline {
+    agent any
+    // Объявление параметров запуска
+    parameters {
+        string(name: 'release', defaultValue: 'DWH/', description: 'release')
+        string(name: 'branch', defaultValue: 'feature/', description: 'branch')
+        choice(choices: ['INFO', 'ERROR', 'WARN', 'DEBUG'], description: 'Выбор уровня логирования', name: 'logging_level')
+    }
+    environment {
+        SSH_CREDS = credentials('root')
+        BB_CREDS = credentials('bitbucket')
+    }
+    options {
+        // Настройка связи с Bitbucket
+        timestamps()
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('Call API') {
+            steps {
+                script {
+                    
+                    echo "The pipeline startet by: " + env.BUILD_USER
+                    def body = """{
+                        "release": "$params.release",
+                        "branch" : "$params.branch",
+                        "developer": "$env.BUILD_USER",
+                        "username": "$env.BB_CREDS_USR",
+                        "password": "$env.BB_CREDS_PSW",
+                        "date": "12 2 222",
+                        "logging_level": "$params.logging_level"
+                    }"""
+                    echo "response body: " + body
+                    try{
+                        def response = httpRequest consoleLogResponseBody: false, 
+                        httpMode: 'POST', ignoreSslErrors: true, requestBody: body, 
+                        validResponseCodes: '200,400:450,500', 
+                        url: 'https://host.docker.internal:8443/api/start', 
+                        responseHandle: 'LEAVE_OPEN', 
+                        wrapAsMultipart: false
+                        def props = readJSON text: response.content
+                        // def log_path = "/cg/logs/app_log.log"
+                        if (response.status != 200){
+                            // def log_path = props['log_path']
+                            error(props['detail'])
+                        }
+                    }
+                    catch (Exception e) {
+                        error("Error occurred: ${e.getMessage()}")
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always{
+            script{
+                def job_path = env.JENKINS_HOME + '/jobs/' + env.JOB_NAME + '/builds/' + env.BUILD_NUMBER
+            // echo job_path
+                sh 'env | sort'
+                remote.user=env.SSH_CREDS_USR
+                remote.password=env.SSH_CREDS_PSW
+                sshGet remote: remote, from: "/cg/logs", into: job_path, override: true
+                // def read = readFile encoding: 'utf-8', file: '/var/jenkins_home/app_log.log'
+                // echo "======= echo user - log file ======="
+                // echo "$read"
+                // echo "$log_path"
+                // def cat_command = "cat "+ log_path
+                def log_path = "/cg/logs/app_log.log"
+                def cat_command = "cat "+ log_path
+                echo job_path
+                sshCommand remote: remote, command: cat_command
+                archiveArtifacts(
+                artifacts: "logs/",
+                allowEmptyArchive: true,
+                onlyIfSuccessful: false
+                )
+                // archiveArtifacts artifacts:  '/jobs/', followSymlinks: false
+            
+            }
+        }
+        failure{
+            echo "See log above to see errors"
+        }
+    }
+}
